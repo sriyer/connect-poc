@@ -1,0 +1,44 @@
+job "test.server" {
+	datacenters = ["dc1"]
+	group "server" {
+		task "py" {
+			driver = "docker"
+   			config {
+				image = "py-server:local"
+				port_map {
+					http = 80
+				}
+
+			}
+			resources {
+				network {
+					port "http" {}
+				}
+			}
+			service {
+				name = "py-server"
+				port = "http"
+			}
+		}
+		task "connect-proxy" {
+            		driver = "raw_exec"
+
+            	config {
+                command = "/usr/bin/consul"
+                args    = [
+                    "connect", "proxy",
+                    "-service", "py-server",
+                    "-service-addr", "${NOMAD_ADDR_py_http}",
+                    "-listen", ":${NOMAD_PORT_tcp}",
+                    "-register",
+                ]
+            }
+
+            resources {
+                network {
+                    port "tcp" {}
+                }
+            }
+        }		
+	}
+}
