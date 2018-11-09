@@ -1,0 +1,43 @@
+job "test.client" {
+	datacenters = ["dc1"]
+	group "client" {
+		task "go" {
+			driver = "docker"
+   			config {
+				image = "go-client:local"
+				port_map {
+					http = 80
+				}
+
+			}
+			resources {
+				network {
+					port "http" {
+						static = 8181
+					}
+				}
+			}
+                        env {
+				TARGET_ADDRESS = "${NOMAD_ADDR_connect-proxy_tcp}"
+			} 
+		}
+		task "connect-proxy" {
+            		driver = "raw_exec"
+
+            		config {
+                		command = "/usr/bin/consul"
+                		args    = [
+                    			"connect", "proxy",
+                    			"-service", "go-web",
+                    			"-upstream", "py-server:${NOMAD_PORT_tcp}",
+                		]	
+            		}
+
+            		resources {
+                		network {
+                    			port "tcp" {}
+                		}
+            		}	
+        	}		
+	}
+}
